@@ -60,13 +60,14 @@ def format_push(d):
     """Format a push for IRC."""
     
     try:
+        repoowner = d['repository__owner__name']
         reponame = d['repository__name']
         commit_msg = d['head_commit__message']
         committer = d['commits'][0]['committer']['name']
         numofc = len(d['commits'])
         branch = d['repository__master_branch']
         compare = d['compare']
-        m = "[{0}] {1} pushed {2} commit to {3} {4} {5}".format(reponame, committer, numofc, branch, commit_msg, compare)
+        m = "[{0}/{1}] {2} pushed {3} commit to {4} {5} {6}".format(repoowner, reponame, committer, numofc, branch, commit_msg, compare)
         return m
         #u'repository__homepage': u'',
         #u'head_commit__distinct': True,
