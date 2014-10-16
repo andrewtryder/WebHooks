@@ -68,10 +68,6 @@ def format_push(d):
         compare = d['compare']
         m = "[{0}] {1} pushed {2} commit to {3} {4} {5}".format(reponame, committer, numofc, branch, commit_msg, compare)
         return m
-        #{u'repository__subscription_url': u'https://api.github.com/repos/reticulatingspline/WolframAlpha/subscription',
-        #u'repository__git_tags_url': u'https://api.github.com/repos/reticulatingspline/WolframAlpha/git/tags{/sha}',
-        #u'repository__releases_url': u'https://api.github.com/repos/reticulatingspline/WolframAlpha/releases{/id}',
-        #u'repository__stargazers_url': u'https://api.github.com/repos/reticulatingspline/WolframAlpha/stargazers',
         #u'repository__homepage': u'',
         #u'head_commit__distinct': True,
         #u'before': u'd0b89abde1fba07213f214bc270ad3e333f7c9f8',
