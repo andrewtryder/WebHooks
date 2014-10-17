@@ -124,8 +124,8 @@ def format_status(d):
         # [Assorted] Travis CI - build #73 passed. (master @ 3c4572b) http://git.io/OhYANw
         # [Assorted] Details: https://travis-ci.org/reticulatingspline/Assorted/builds/38050581
         reponame = d['repository__name']
-        branch = d['branches__name']  # branch.
-        sha = d['branches__commit__sha'][0:7]  # first 7 of the sha.
+        branch = d['branches'][0]['name']  # branch.
+        sha = d['branches'][0]['commit']['sha'][0:7]  # first 7 of the sha.
         desc = d['description']  # "state": "pending"
         target_url = d['target_url']
         m = "[{0}] {1} - ({2}@{3}) {4}".format(_b(reponame), _bold(desc), branch, sha, target_url)
@@ -141,7 +141,8 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     
     name = "WebHooksService"
     defaultResponse = """This plugin handles only POST request, please don't use other requests."""
-
+    log = log.getPluginLogger('WebHooks')
+    
     def doPost(self, handler, path, form):
         log.info("{0}".format(handler.address_string()))
         if not handler.address_string().endswith('.rs.github.com') and \
