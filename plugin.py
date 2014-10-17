@@ -8,7 +8,6 @@
 import json
 import cPickle as pickle
 from collections import defaultdict
-import os
 # supybot libs
 import supybot.utils as utils
 from supybot.commands import *
@@ -18,7 +17,7 @@ import supybot.callbacks as callbacks
 # extra supybot libs
 import supybot.conf as conf
 import supybot.ircmsgs as ircmsgs
-#import supybot.world as world
+import supybot.world as world
 import supybot.log as log
 import supybot.httpserver as httpserver
 try:
@@ -142,6 +141,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     defaultResponse = """This plugin handles only POST request, please don't use other requests."""
 
     def doPost(self, handler, path, form):
+        log.info("{0}".format(handler.address_string()))
         if not handler.address_string().endswith('.rs.github.com') and \
                 not handler.address_string().endswith('.cloud-ips.com') and \
                 not handler.address_string() == 'localhost' and \
@@ -178,11 +178,11 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             if headers['x-github-event'] == 'push':  # push event.
                 s = format_push(d)
                 if s:  # send if we get it back.
-                    self.plugin._announce_webhook(s[0], s[1])
+                    self.plugin.announce_webhook(s[0], s[1])
             elif headers['x-github-event'] == 'status':
                 s = format_status(d)
                 if s:  # send if we get it back.
-                    self.plugin._announce_webhook(s[0], s[1])
+                    self.plugin.announce_webhook(s[0], s[1])
 
 class WebHooks(callbacks.Plugin):
     """Add the help for "@plugin help WebHooks" here
@@ -196,12 +196,13 @@ class WebHooks(callbacks.Plugin):
         callback = WebHooksServiceCallback()
         callback.plugin = self
         httpserver.hook('webhooks', callback)
+        # cb
+        callbacks.Plugin.__init__(self, irc)
         # db.
-        self._webhooks = defaultdict(set) #ircutils.IrcDict()
+        self._webhooks = defaultdict(set)
         self._loadpickle() # load saved data.
 
     def die(self):
-
         self.__parent.die()
         httpserver.unhook('webhooks')
 
@@ -209,7 +210,7 @@ class WebHooks(callbacks.Plugin):
     # WEB HOOK ANNOUNCING #
     #######################
 
-    def _announce_webhook(self, repo, message):
+    def announce_webhook(self, repo, message):
         """Internal function to announce webhooks."""
         
         # lower it first.
@@ -217,6 +218,7 @@ class WebHooks(callbacks.Plugin):
         # only work if present
         if repo in self._webhooks:  # if represent present.
             for c in self._webhooks[repo]:  # for each chan in it.
+                #world.getIrc(server)
                 irc.queueMsg(ircmsgs.privmsg(c, message))  # post.
 
     #####################
