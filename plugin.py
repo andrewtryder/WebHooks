@@ -6,7 +6,9 @@
 ###
 # my libs
 import json
-import cgi
+import cPickle as pickle
+from collections import defaultdict
+import os
 # supybot libs
 import supybot.utils as utils
 from supybot.commands import *
@@ -14,8 +16,9 @@ import supybot.plugins as plugins
 import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
 # extra supybot libs
+import supybot.conf as conf
 import supybot.ircmsgs as ircmsgs
-import supybot.world as world
+#import supybot.world as world
 import supybot.log as log
 import supybot.httpserver as httpserver
 try:
@@ -111,7 +114,7 @@ def format_push(d):
                                                                    _o(branch),\
                                                                    commit_msg,\
                                                                    compare)
-        return m
+        return (reponame, m)
     except Exception as e:
         log.info("_format_push :: ERROR :: {0}".format(e))
         return None
@@ -125,12 +128,16 @@ def format_status(d):
         desc = d['description']  # "state": "pending"
         target_url = d['target_url']
         m = "[{0}] {1} - {2}".format(_b(reponame), _bold(desc), target_url)
-        return m
+        return (reponame, m)
     except Exception as e:
         log.info("format_status :: ERROR :: {0}".format(e))
         return None
 
 class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
+    """
+    https://developer.github.com/webhooks/
+    """
+    
     name = "WebHooksService"
     defaultResponse = """This plugin handles only POST request, please don't use other requests."""
 
@@ -165,16 +172,17 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             json_payload = form.getvalue('payload')  # take from the form.
             payload = json.loads(json_payload)  # json -> dict.
             d = flatten_subdicts(payload)  # flatten it out.
-            log.info("doPost: {0}".format(d))  # log.
+            #log.info("doPost: {0}".format(d))  # log the message.
             # lets figure out how to handle each type of notification here.
+            # https://developer.github.com/webhooks/
             if headers['x-github-event'] == 'push':  # push event.
                 s = format_push(d)
                 if s:  # send if we get it back.
-                    self.plugin._announce_webhook(s)
+                    self.plugin._announce_webhook(s[0], s[1])
             elif headers['x-github-event'] == 'status':
                 s = format_status(d)
                 if s:  # send if we get it back.
-                    self.plugin._announce_webhook(s)
+                    self.plugin._announce_webhook(s[0], s[1])
 
 class WebHooks(callbacks.Plugin):
     """Add the help for "@plugin help WebHooks" here
@@ -184,18 +192,120 @@ class WebHooks(callbacks.Plugin):
     def __init__(self, irc):
         self.__parent = super(WebHooks, self)
         self.__parent.__init__(irc)
+        # webhook.
         callback = WebHooksServiceCallback()
         callback.plugin = self
         httpserver.hook('webhooks', callback)
+        # db.
+        self._webhooks = defaultdict(set) #ircutils.IrcDict()
+        self._loadpickle() # load saved data.
 
     def die(self):
+
         self.__parent.die()
         httpserver.unhook('webhooks')
 
-    def _announce_webhook(self, m):
-        for (server, channel) in (('efnet', '#supybot'),):
-            m = "{0}".format(m)
-            world.getIrc(server).sendMsg(ircmsgs.privmsg(channel, m))
+    #######################
+    # WEB HOOK ANNOUNCING #
+    #######################
+
+    def _announce_webhook(self, repo, message):
+        """Internal function to announce webhooks."""
+        
+        # lower it first.
+        repo = repo.lower()
+        # only work if present
+        if repo in self._webhooks:  # if represent present.
+            for c in self._webhooks[repo]:  # for each chan in it.
+                irc.queueMsg(ircmsgs.privmsg(c, message))  # post.
+
+    #####################
+    # INTERNAL DATABASE #
+    #####################
+
+    def _loadpickle(self):
+        """Load channel data from pickle."""
+
+        try:
+            datafile = open(conf.supybot.directories.data.dirize(self.name()+".pickle"), 'rb')
+            try:
+                dataset = pickle.load(datafile)
+            finally:
+                datafile.close()
+        except IOError:
+            return False
+        # restore.
+        self._webhooks = dataset["webhooks"]
+        return True
+
+    def _savepickle(self):
+        """Save channel data to pickle."""
+
+        data = {"webhooks": self._webhooks}
+        try:
+            datafile = open(conf.supybot.directories.data.dirize(self.name()+".pickle"), 'wb')
+            try:
+                pickle.dump(data, datafile)
+            finally:
+                datafile.close()
+        except IOError:
+            return False
+        return True
+
+    ############################
+    # PUBLIC DATABASE COMMANDS #
+    ############################
+    
+    def addwebhook(self, irc, msg, args, optrepo, optchannel):
+        """<repository name> [#channel]
+        
+        Add announcing of repository webhooks to channel.
+        """
+        
+        # first check for channel.
+        chan = msg.args[0]
+        if not irc.isChannel(ircutils.toLower(chan)):  # we're NOT run in a channel.
+            if not optchannel:
+                irc.reply("ERROR: You must specify a channel or run from a channel in order to add.")
+                return
+            else:  # set chan as what the user wants.
+                chan = optchannel
+        # lower both
+        chan = chan.lower()
+        optrepo = optrepo.lower()
+        # now lets try and add the repo. sanity check if present first.
+        if optrepo in self._webhooks:  # channel already in the webhooks.
+            if chan in self._webhooks[optrepo]:  # channel already there.
+                irc.reply("ERROR: {0} is already being announced on {1}".format(optrepo, chan))
+                return
+        # last check is to see if we're on the channel.
+        if chan not in irc.state.channels:
+            irc.reply("ERROR: I must be present on a channel ({0}) you're trying to add.".format(chan))
+            return
+        # otherwise, we're good. lets use the _addHook.
+        try:
+            self._webhooks[optrepo].add(chan)
+            self._savepickle() # save.
+            irc.replySuccess()
+        except Exception as e:
+            irc.reply("ERROR: I could not add {0} to {1} :: {2}".format(optrepo, chan, e))
+    
+    addwebhook = wrap(addwebhook, [('checkCapability', 'owner'), ('somethingWithoutSpaces'), optional('somethingWithoutSpaces')])
+
+    def listwebhooks(self, irc, msg, args):
+        """
+        List active webhooks.
+        """
+    
+        w = len(self._webhooks)
+        if w == 0:
+            irc.reply("ERROR: I have no webhooks listed. Use addwebhook to add some.")
+            return
+        # we have them so lets print.
+        for (k, v) in self._webhooks.items():
+            irc.reply("{0} :: {1}".format(k, " | ".join([i for i in v])))
+    
+    listwebhooks = wrap(listwebhooks)
 
 Class = WebHooks
 
