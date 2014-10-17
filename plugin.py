@@ -143,7 +143,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     defaultResponse = """This plugin handles only POST request, please don't use other requests."""
     
     def __init__(self):
-        self.log = log.getPluginLogger('WebHooks')
+        self.log = log.getPluginLogger(self.name())
     
     def doPost(self, handler, path, form):
         log.info("{0}".format(handler.address_string()))
