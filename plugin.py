@@ -105,7 +105,7 @@ def format_push(d):
         numofc = len(d['commits'])
         branch = d['repository__master_branch']
         compare = d['compare']
-        m = "[{0}] {2} pushed {3} commit(s) to {4} {5} {6}".format(_b(reponame),\
+        m = "[{0}] {1} pushed {2} commit(s) to {3} {4} {5}".format(_b(reponame),\
                                                                    _r(committer),\
                                                                    _bold(numofc),\
                                                                    _o(branch),\
