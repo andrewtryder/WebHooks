@@ -142,8 +142,6 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     name = "WebHooksService"
     defaultResponse = """This plugin handles only POST request, please don't use other requests."""
     
-    _log = log.getPluginLogger('WebHooks')
-    
     def doPost(self, handler, path, form):
         log.info("{0}".format(handler.address_string()))
         if not handler.address_string().endswith('.rs.github.com') and \
@@ -176,6 +174,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             json_payload = form.getvalue('payload')  # take from the form.
             payload = json.loads(json_payload)  # json -> dict.
             d = flatten_subdicts(payload)  # flatten it out.
+            _log = log.getPluginLogger('WebHooks')
             _log.info("doPost: {0}".format(d))  # log the message.
             # lets figure out how to handle each type of notification here.
             # https://developer.github.com/webhooks/
