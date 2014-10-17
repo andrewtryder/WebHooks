@@ -98,20 +98,19 @@ def format_push(d):
     try:
         # [GitPull] reticulatingspline pushed 1 commit to master [+0/-0/1] http://git.io/n4lbSQ
         # [GitPull] spline e2070d1 - Fix initial test as I forgot it might actually update.
-        repoowner = d['repository__owner__name']
+        #repoowner = d['repository__owner__name']
         reponame = d['repository__name']
         commit_msg = d['head_commit__message']
         committer = d['commits'][0]['committer']['name']
         numofc = len(d['commits'])
         branch = d['repository__master_branch']
         compare = d['compare']
-        m = "[{0}/{1}] {2} pushed {3} commit(s) to {4} {5} {6}".format(_b(repoowner),\
-                                                                       _b(reponame),\
-                                                                       _r(committer),\
-                                                                       _bold(numofc),\
-                                                                       _o(branch),\
-                                                                        commit_msg,\
-                                                                        compare)
+        m = "[{0}] {2} pushed {3} commit(s) to {4} {5} {6}".format(_b(reponame),\
+                                                                   _r(committer),\
+                                                                   _bold(numofc),\
+                                                                   _o(branch),\
+                                                                   commit_msg,\
+                                                                   compare)
         return m
     except Exception as e:
         log.info("_format_push :: ERROR :: {0}".format(e))
@@ -123,9 +122,9 @@ def format_status(d):
         # [Assorted] Travis CI - build #73 passed. (master @ 3c4572b) http://git.io/OhYANw
         # [Assorted] Details: https://travis-ci.org/reticulatingspline/Assorted/builds/38050581
         reponame = d['repository__name']
-        commit_msg = d['head_commit__message']
-        committer = d['commits'][0]['committer']['name']
-        m = "{0} - {1} - {2}".format(reponame, commit_msg, committer)
+        desc = d['description']  # "state": "pending"
+        target_url = d['target_url']
+        m = "[{0}] {1} - {2}".format(_b(reponame), _bold(desc), target_url)
         return m
     except Exception as e:
         log.info("format_status :: ERROR :: {0}".format(e))
