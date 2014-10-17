@@ -316,10 +316,51 @@ class WebHooks(callbacks.Plugin):
             irc.reply("ERROR: I have no webhooks listed. Use addwebhook to add some.")
             return
         # we have them so lets print.
+        irc.reply("+--------------------------+------------------------------------------------------+")
+        irc.reply("| REPOSITORY NAME          | CHANNELS                                             |")
+        irc.reply("+--------------------------+------------------------------------------------------+")
         for (k, v) in self._webhooks.items():
-            irc.reply("{0} :: {1}".format(k, " | ".join([i for i in v])))
+            irc.reply("| {0:<24} | {1:<52} |".format(k, " | ".join([i for i in v])))
+        irc.reply("+--------------------------+------------------------------------------------------+")
     
-    listwebhooks = wrap(listwebhooks)
+    listwebhooks = wrap(listwebhooks, [('checkCapability', 'owner')])
+
+    def delwebhook(self, irc, msg, args, optrepo, optchannel):
+        """<repo> <channel>
+        
+        Delete announcement of repository from channel.
+        """
+        
+        # first check for channel.
+        chan = msg.args[0]
+        if not irc.isChannel(ircutils.toLower(chan)):  # we're NOT run in a channel.
+            if not optchannel:
+                irc.reply("ERROR: You must specify a channel or run from a channel in order to add.")
+                return
+            else:  # set chan as what the user wants.
+                chan = optchannel
+        # lower both
+        chan = chan.lower()
+        optrepo = optrepo.lower()
+        # make sure repo is valid.
+        if optrepo not in self._webhooks:  # channel already in the webhooks.
+            irc.reply("ERROR: {0} repository is invalid. Valid choices: {0}".format(self._webhooks.keys()))
+            return
+        # if repo is valid, make sure channel is in there.
+        if chan not in self._webhooks[optrepo]:  # channel already there.
+            irc.reply("ERROR: {0} is an invalid channel for repository: {1}. Repos being announced: {2}".format(chan, optrepo, self._webhooks[optrepo]))
+            return
+        # we're here if all is good. lets try to delete.
+        try:
+            self._webhooks[optrepo].remove(chan)  # delete.
+            # now lets check if the channel is empty and remove if it is.
+            if len(self._webhooks[optrepo]) == 0:
+                del self._webhooks[optrepo]
+            irc.replySuccess()
+        except Exception as e:
+            irc.reply("ERROR: I could not delete channel {0} for {1} :: {2}".format(chan, optrepo, e))
+            
+    delwebhook = wrap(delwebhook, [('checkCapability', 'owner'), ('somethingWithoutSpaces'), optional('somethingWithoutSpaces')])
 
 Class = WebHooks
 
