@@ -138,10 +138,12 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     """
     https://developer.github.com/webhooks/
     """
-    
+
     name = "WebHooksService"
     defaultResponse = """This plugin handles only POST request, please don't use other requests."""
-    log = log.getPluginLogger('WebHooks')
+    
+    def __init__(self):
+        self.log = log.getPluginLogger('WebHooks')
     
     def doPost(self, handler, path, form):
         log.info("{0}".format(handler.address_string()))
