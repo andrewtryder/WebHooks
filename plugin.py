@@ -180,7 +180,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             payload = json.loads(json_payload)  # json -> dict.
             d = flatten_subdicts(payload)  # flatten it out.
             
-            _log.info("doPost: {0}".format(d))  # log the message.
+            #self._log.info("doPost: {0}".format(d))  # log the message.
             __log.info("doPost: {0}".format(d))  # log the message.
             # lets figure out how to handle each type of notification here.
             # https://developer.github.com/webhooks/
