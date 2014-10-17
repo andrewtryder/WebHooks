@@ -124,9 +124,11 @@ def format_status(d):
         # [Assorted] Travis CI - build #73 passed. (master @ 3c4572b) http://git.io/OhYANw
         # [Assorted] Details: https://travis-ci.org/reticulatingspline/Assorted/builds/38050581
         reponame = d['repository__name']
+        branch = d['branches__name']  # branch.
+        sha = d['branches__commit__sha'][0:7]  # first 7 of the sha.
         desc = d['description']  # "state": "pending"
         target_url = d['target_url']
-        m = "[{0}] {1} - {2}".format(_b(reponame), _bold(desc), target_url)
+        m = "[{0}] {1} - ({2}@{3}) {4}".format(_b(reponame), _bold(desc), branch, sha, target_url)
         return (reponame, m)
     except Exception as e:
         log.info("format_status :: ERROR :: {0}".format(e))
@@ -197,7 +199,7 @@ class WebHooks(callbacks.Plugin):
         callback.plugin = self
         httpserver.hook('webhooks', callback)
         # cb
-        callbacks.Plugin.__init__(self, irc)
+        #callbacks.Plugin.__init__(self, irc)
         # db.
         self._webhooks = defaultdict(set)
         self._loadpickle() # load saved data.
@@ -218,8 +220,9 @@ class WebHooks(callbacks.Plugin):
         # only work if present
         if repo in self._webhooks:  # if represent present.
             for c in self._webhooks[repo]:  # for each chan in it.
-                #world.getIrc(server)
-                irc.queueMsg(ircmsgs.privmsg(c, message))  # post.
+                for irc in world.ircs:  # all networks.
+                    if c in irc.state.channels:  # if channel matches.
+                        irc.queueMsg(ircmsgs.privmsg(c, message))  # post.
 
     #####################
     # INTERNAL DATABASE #
