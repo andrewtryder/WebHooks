@@ -33,7 +33,7 @@ except ImportError:
 # HELPER FUNCTIONS #
 ####################
 
-__log = log.getPluginLogger('WebHooks')
+logg = log.getPluginLogger('WebHooks')
 
 def _r(s):
     return ircutils.mircColor(s, 'red')
@@ -181,7 +181,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             d = flatten_subdicts(payload)  # flatten it out.
             
             #self._log.info("doPost: {0}".format(d))  # log the message.
-            __log.info("doPost: {0}".format(d))  # log the message.
+            logg.info("doPost: {0}".format(d))  # log the message.
             # lets figure out how to handle each type of notification here.
             # https://developer.github.com/webhooks/
             if headers['x-github-event'] == 'push':  # push event.
