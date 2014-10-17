@@ -12,9 +12,8 @@ script:
   - cd .. && supybot-test WebHooks
 notifications:
     email: false
-    irc: "irc.efnet.net#supybot"
+    #irc: "irc.efnet.net#supybot"
     webhooks: http://n.tkte.ch/h/3546/mPA_TiRkyd3O1d1WAFjnGSaO
-
 matrix:
     fast_finish: true
 
