@@ -26,6 +26,46 @@ except ImportError:
     # without the i18n module
     _ = lambda x:x
 
+
+####################
+# HELPER FUNCTIONS #
+####################
+
+def _r(s):
+    return ircutils.mircColor(s, 'red')
+
+def _y(s):
+    """Returns a yellow string."""
+    return ircutils.mircColor(s, 'yellow')
+
+def _g(s):
+    """Returns a green string."""
+    return ircutils.mircColor(s, 'green')
+
+def _b(s):
+    """Returns a blue string."""
+    return ircutils.mircColor(s, 'blue')
+
+def _lb(s):
+    """Returns a light blue string."""
+    return ircutils.mircColor(s, 'light blue')
+
+def _o(s):
+    """Returns an orange string."""
+    return ircutils.mircColor(s, 'orange')
+
+def _bold(s):
+    """Returns a bold string."""
+    return ircutils.bold(s)
+
+def _ul(s):
+    """Returns an underline string."""
+    return ircutils.underline(s)
+
+def _bu(s):
+    """Returns a bold/underline string."""
+    return ircutils.bold(ircutils.underline(s))
+
 def flatten_subdicts(dicts, flat=None):
     """Change dict of dicts into a dict of strings/integers. Useful for
     using in string formatting."""
@@ -47,19 +87,17 @@ def flatten_subdicts(dicts, flat=None):
         return flat
     else:
         return dicts
-
-# [GitPull] reticulatingspline pushed 1 commit to master [+0/-0/1] http://git.io/n4lbSQ
-# [GitPull] spline e2070d1 - Fix initial test as I forgot it might actually update.
-# [Assorted] Travis CI - build #73 passed. (master @ 3c4572b) http://git.io/OhYANw
-# [Assorted] Details: https://travis-ci.org/reticulatingspline/Assorted/builds/38050581
-# [Assorted] reticulatingspline pushed 1 commit to master [+0/-0/+1] http://git.io/OhYANw
-# [Assorted] spline 3c4572b - Turn off logURLs by default.
-
+    
+##############
+# FORMATTING #
+##############
 
 def format_push(d):
     """Format a push for IRC."""
     
     try:
+        # [GitPull] reticulatingspline pushed 1 commit to master [+0/-0/1] http://git.io/n4lbSQ
+        # [GitPull] spline e2070d1 - Fix initial test as I forgot it might actually update.
         repoowner = d['repository__owner__name']
         reponame = d['repository__name']
         commit_msg = d['head_commit__message']
@@ -67,7 +105,7 @@ def format_push(d):
         numofc = len(d['commits'])
         branch = d['repository__master_branch']
         compare = d['compare']
-        m = "[{0}/{1}] {2} pushed {3} commit to {4} {5} {6}".format(repoowner, reponame, committer, numofc, branch, commit_msg, compare)
+        m = "[{0}/{1}] {2} pushed {3} commit(s) to {4} {5} {6}".format(_b(repoowner), _b(reponame), committer, numofc, branch, commit_msg, compare)
         return m
         #u'repository__homepage': u'',
         #u'head_commit__distinct': True,
@@ -199,6 +237,8 @@ def format_push(d):
 def format_status(d):
     """Format."""
     try:
+        # [Assorted] Travis CI - build #73 passed. (master @ 3c4572b) http://git.io/OhYANw
+        # [Assorted] Details: https://travis-ci.org/reticulatingspline/Assorted/builds/38050581
         reponame = d['repository__name']
         commit_msg = d['head_commit__message']
         committer = d['commits'][0]['committer']['name']
@@ -225,8 +265,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(b('Error: you are not a GitHub server.'))
-        else:
-            # send OK back.
+        else:  # send OK back.
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
@@ -240,10 +279,11 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             if headers['x-github-event'] not in ('push', 'status'):
                 log.info("ERROR: x-github-event not push or status :: {0}".format(headers))
                 return
-            json_payload = form.getvalue('payload')
-            payload = json.loads(json_payload)
-            d = flatten_subdicts(payload)
-            log.info("doPost: {0}".format(d))
+            # good payload so lets process it.
+            json_payload = form.getvalue('payload')  # take from the form.
+            payload = json.loads(json_payload)  # json -> dict.
+            d = flatten_subdicts(payload)  # flatten it out.
+            log.info("doPost: {0}".format(d))  # log.
             # lets figure out how to handle each type of notification here.
             if headers['x-github-event'] == 'push':  # push event.
                 s = format_push(d)
