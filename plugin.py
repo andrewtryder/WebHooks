@@ -172,7 +172,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             json_payload = form.getvalue('payload')  # take from the form.
             payload = json.loads(json_payload)  # json -> dict.
             d = flatten_subdicts(payload)  # flatten it out.
-            #log.info("doPost: {0}".format(d))  # log the message.
+            log.info("doPost: {0}".format(d))  # log the message.
             # lets figure out how to handle each type of notification here.
             # https://developer.github.com/webhooks/
             if headers['x-github-event'] == 'push':  # push event.
