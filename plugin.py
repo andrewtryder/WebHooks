@@ -170,6 +170,9 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     def doPost(self, handler, path, form):
         # have to handle different hooks here.
         ip = handler.address_string()  # source ip.
+        self.log.info("HEADERS: {0}".format(dict(self.headers)))
+        self.log.info("PATH: {0}".format(path))
+        self.log.info("FORM: {0}".format(form))
         # now handle different cases.
         if ip.endswith('.bitbucket.org'):  # bitbucket.
             self.send_response(200)
@@ -188,7 +191,8 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
                 self.plugin.announce_webhook(s[0], s[1])
         elif ipaddr.IPv4Address(ip) in ipaddr.IPv4Network('192.30.252.0/22'): # github
         # in the future, this needs to check for ipv6 (2620:112:3000::/44)
-            # https://help.github.com/articles/what-ip-addresses-does-github-use-that-i-should-whitelist/
+        # 86e6927206b44a699afc73d3bcb68b3b3dfd6cb1
+        # https://help.github.com/articles/what-ip-addresses-does-github-use-that-i-should-whitelist/
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
@@ -221,12 +225,6 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
                     self.log.info("Should be sending status.")
                     self.plugin.announce_webhook(s[0], s[1])
         else:
-        #elif ip.endswith('.rs.github.com') or ip.
-        #        not handler.address_string().endswith('.cloud-ips.com') and \
-        #        not handler.address_string() == 'localhost' and \
-        #        not handler.address_string().startswith('127.0.0.') and \
-        #        not handler.address_string().startswith('192.30.252.') and \
-        #        not handler.address_string().startswith('204.232.175.'):
             self.log.warning("""'%s' tried to act as a web hook""" % ip)
             self.send_response(403)
             self.send_header('Content-type', 'text/plain')
@@ -294,7 +292,7 @@ class WebHooks(callbacks.Plugin):
     def announce_webhook(self, repo, message):
         """Internal function to announce webhooks."""
         
-        self.log.info("Trying to announce: {0} {1}".format(repo, message))
+        #self.log.info("Trying to announce: {0} {1}".format(repo, message))
         # lower it first.
         repo = repo.lower()
         # only work if present
