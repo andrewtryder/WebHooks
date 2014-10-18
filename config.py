@@ -25,9 +25,8 @@ def configure(advanced):
 
 
 WebHooks = conf.registerPlugin('WebHooks')
-# This is where your configuration variables (if any) should go.  For example:
-# conf.registerGlobalValue(WebHooks, 'someConfigVariableName',
-#     registry.Boolean(False, _("""Help for someConfigVariableName.""")))
+conf.registerGlobalValue(WebHooks, 'username', registry.String('', """Username for webhooks.""", private=True))
+conf.registerGlobalValue(WebHooks, 'password', registry.String('', """Password for webhooks.""", private=True))
 
 
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:

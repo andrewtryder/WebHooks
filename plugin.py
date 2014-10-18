@@ -8,8 +8,7 @@
 import json
 import cPickle as pickle
 from collections import defaultdict
-#import hmac
-#import hashlib
+import base64
 import ipaddr
 # supybot libs
 import supybot.utils as utils
@@ -168,21 +167,39 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
         self.log = log.getPluginLogger('WebHooks')
         
     def doPost(self, handler, path, form):
+        # before we do anything, make sure its authenticated.
         # have to handle different hooks here.
-        ip = handler.address_string()  # source ip.
         self.log.info("HEADERS: {0}".format(dict(self.headers)))
         self.log.info("PATH: {0}".format(path))
         self.log.info("FORM: {0}".format(form))
-        # now handle different cases.
+        ip = handler.address_string()  # source ip.
+        headers = dict(self.headers)
+        # make sure auth header is present.
+        if 'authorization' not in headers:
+            self.log.warning("""'%s' tried to act as a web hook""" % ip)
+            self.send_response(403)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write('ERROR')
+        else:  # we have auth, lets go.
+            ah = headers['authorization']
+            # grab user and password from config.
+            user = self.registryValue('username')
+            pw = self.registryValue('password')
+            # make our string to compare against.
+            base64string = base64.encodestring('%s:%s' % (user, pw))[:-1]
+            authstring = "Basic {0}".format(base64string)
+            # now lets compare.
+            if ah != authstring:  # different string. bail.
+                self.log.warning("ERROR: {0} sent a bad auth string: {1}".format(ip, ah))
+                return
+        # if we're here, it was auth'd. lets work with different hooks.
         if ip.endswith('.bitbucket.org'):  # bitbucket.
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write("OK")
-            # headers
-            headers = dict(self.headers)
             # payload
-            # good payload so lets process it.
             json_payload = form.getvalue('payload')  # take from the form.
             payload = json.loads(json_payload)  # json -> dict.
             d = Formatting().flatten_subdicts(payload)  # flatten it out.
@@ -249,8 +266,8 @@ class WebHooks(callbacks.Plugin):
         self._loadpickle() # load saved data.
 
     def die(self):
-        self.__parent.die()
         httpserver.unhook('webhooks')
+        self.__parent.die()
 
     #####################
     # INTERNAL DATABASE #
