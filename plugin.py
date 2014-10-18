@@ -187,10 +187,12 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             if headers['x-github-event'] == 'push':  # push event.
                 s = Formatting().format_push(d)
                 if s:  # send if we get it back.
+                    self.log.info("Should be sending push.")
                     self.plugin.announce_webhook(s[0], s[1])
             elif headers['x-github-event'] == 'status':
                 s = Formatting().format_status(d)
                 if s:  # send if we get it back.
+                    self.log.info("Should be sending status.")
                     self.plugin.announce_webhook(s[0], s[1])
 
 class WebHooks(callbacks.Plugin):
@@ -205,8 +207,6 @@ class WebHooks(callbacks.Plugin):
         callback = WebHooksServiceCallback()
         callback.plugin = self
         httpserver.hook('webhooks', callback)
-        # cb
-        #callbacks.Plugin.__init__(self, irc)
         # db.
         self._webhooks = defaultdict(set)
         self._loadpickle() # load saved data.
@@ -255,6 +255,7 @@ class WebHooks(callbacks.Plugin):
     def announce_webhook(self, repo, message):
         """Internal function to announce webhooks."""
         
+        self.log.info("Trying to announce: {0} {1}".format(repo, message))
         # lower it first.
         repo = repo.lower()
         # only work if present
