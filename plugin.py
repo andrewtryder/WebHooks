@@ -189,7 +189,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             base64string = base64.encodestring('%s:%s' % (self.username, self.password))[:-1]
             authstring = "Basic {0}".format(base64string)
             # now lets compare.
-            if ah != authstring:  # different string. bail.
+            if ah != authstring:  # different string. bail from bad auth.
                 self.log.warning("ERROR: {0} sent a bad auth string: {1} mine is {2}".format(ip, ah, authstring))
                 return
         # if we're here, it was auth'd. lets work with different hooks.
