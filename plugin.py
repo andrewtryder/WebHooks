@@ -165,6 +165,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     
     def __init__(self):
         self.log = log.getPluginLogger('WebHooks')
+        self.callbacks = callbacks
         
     def doPost(self, handler, path, form):
         # before we do anything, make sure its authenticated.
@@ -184,8 +185,8 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
         else:  # we have auth, lets go.
             ah = headers['authorization']
             # grab user and password from config.
-            user = callbacks.registryValue('username')
-            pw = callbacks.registryValue('password')
+            user = self.callbacks.registryValue('username')
+            pw = self.callbacks.registryValue('password')
             # make our string to compare against.
             base64string = base64.encodestring('%s:%s' % (user, pw))[:-1]
             authstring = "Basic {0}".format(base64string)
