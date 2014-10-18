@@ -185,15 +185,12 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             self.wfile.write('ERROR')
         else:  # we have auth, lets go.
             ah = headers['authorization']
-            # grab user and password from config.
-            user = self.username
-            pw = self.password
             # make our string to compare against.
-            base64string = base64.encodestring('%s:%s' % (user, pw))[:-1]
+            base64string = base64.encodestring('%s:%s' % (self.username, self.password))[:-1]
             authstring = "Basic {0}".format(base64string)
             # now lets compare.
             if ah != authstring:  # different string. bail.
-                self.log.warning("ERROR: {0} sent a bad auth string: {1}".format(ip, ah))
+                self.log.warning("ERROR: {0} sent a bad auth string: {1} mine is {2}".format(ip, ah, authstring))
                 return
         # if we're here, it was auth'd. lets work with different hooks.
         if ip.endswith('.bitbucket.org'):  # bitbucket.
