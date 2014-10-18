@@ -103,13 +103,13 @@ class Formatting(object):
             # [GitPull] reticulatingspline pushed 1 commit to master [+0/-0/1] http://git.io/n4lbSQ
             # [GitPull] spline e2070d1 - Fix initial test as I forgot it might actually update.
             #repoowner = d['repository__owner__name']
-            reponame = self._b(d['repository__name'])
+            reponame = d['repository__name']
             commit_msg = d['head_commit__message']
             committer = self._r(d['commits'][0]['committer']['name'])
             numofc = self._bold(len(d['commits']))
             branch = self._o(d['repository__master_branch'])
             compare = d['compare']
-            m = "[{0}] {1} pushed {2} commit(s) to {3} {4} {5}".format(reponame,\
+            m = "[{0}] {1} pushed {2} commit(s) to {3} {4} {5}".format(self._b(reponame),\
                                                                        committer,\
                                                                        numofc,\
                                                                        branch,\
@@ -126,12 +126,12 @@ class Formatting(object):
         try:
             # [Assorted] Travis CI - build #73 passed. (master @ 3c4572b) http://git.io/OhYANw
             # [Assorted] Details: https://travis-ci.org/reticulatingspline/Assorted/builds/38050581
-            reponame = self._b(d['repository__name'])
+            reponame = d['repository__name']
             branch = d['branches'][0]['name']  # branch.
             sha = d['branches'][0]['commit']['sha'][0:7]  # first 7 of the sha.
             desc = self._bold(d['description'])  # "state": "pending"
             target_url = d['target_url']
-            m = "[{0}] {1} - ({2}@{3}) {4}".format(reponame, desc, branch, sha, target_url)
+            m = "[{0}] {1} - ({2}@{3}) {4}".format(self._b(reponame), desc, branch, sha, target_url)
             return (reponame, m)
         except Exception as e:
             log.info("format_status :: ERROR :: {0}".format(e))
@@ -255,14 +255,17 @@ class WebHooks(callbacks.Plugin):
     def announce_webhook(self, repo, message):
         """Internal function to announce webhooks."""
         
-        self.log.info("Trying to announce: {0} {1}".format(repo, message))
+        #self.log.info("Trying to announce: {0} {1}".format(repo, message))
         # lower it first.
         repo = repo.lower()
         # only work if present
         if repo in self._webhooks:  # if represent present.
+            #self.log.info("{0} is in webhooks".format(repo))
             for c in self._webhooks[repo]:  # for each chan in it.
+                #self.log.info("{0} is in {1}".format(c, self._webhooks[repo]))
                 for irc in world.ircs:  # all networks.
                     if c in irc.state.channels:  # if channel matches.
+                        #self.log.info("{0} matched".format(c))
                         irc.queueMsg(ircmsgs.privmsg(c, message))  # post.
 
     ############################
