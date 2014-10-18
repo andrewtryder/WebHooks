@@ -163,10 +163,11 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
     name = "WebHooksService"
     defaultResponse = """This plugin handles only POST request, please don't use other requests."""
     
-    def __init__(self):
+    def __init__(self, plugin):
         self.log = log.getPluginLogger('WebHooks')
-        self.callbacks = callbacks
-        
+        self.username = plugin.registryValue('username')
+        self.password = plugin.registryValue('password')
+
     def doPost(self, handler, path, form):
         # before we do anything, make sure its authenticated.
         # have to handle different hooks here.
@@ -185,8 +186,8 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
         else:  # we have auth, lets go.
             ah = headers['authorization']
             # grab user and password from config.
-            user = self.callbacks.registryValue('username')
-            pw = self.callbacks.registryValue('password')
+            user = self.username
+            pw = self.password
             # make our string to compare against.
             base64string = base64.encodestring('%s:%s' % (user, pw))[:-1]
             authstring = "Basic {0}".format(base64string)
@@ -259,7 +260,7 @@ class WebHooks(callbacks.Plugin):
         self.__parent = super(WebHooks, self)
         self.__parent.__init__(irc)
         # webhook.
-        callback = WebHooksServiceCallback()
+        callback = WebHooksServiceCallback(self)
         callback.plugin = self
         httpserver.hook('webhooks', callback)
         # db.
