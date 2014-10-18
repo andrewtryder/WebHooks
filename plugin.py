@@ -28,14 +28,12 @@ except ImportError:
     # without the i18n module
     _ = lambda x:x
 
-# need this for logging.
-logg = log.getPluginLogger('WebHooks')
 
 ########################
 # FORMATTING FUNCTIONS #
 ########################
 
-class Formatting():
+class Formatting(object):
     """Class for formatting."""
     
     def __init__(self):
@@ -181,17 +179,17 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             # good payload so lets process it.
             json_payload = form.getvalue('payload')  # take from the form.
             payload = json.loads(json_payload)  # json -> dict.
-            d = Formatting.flatten_subdicts(payload)  # flatten it out.
+            d = Formatting().flatten_subdicts(payload)  # flatten it out.
             #self._log.info("doPost: {0}".format(d))  # log the message.
             self.log.info("doPost: {0}".format(d))  # log the message.
             # lets figure out how to handle each type of notification here.
             # https://developer.github.com/webhooks/
             if headers['x-github-event'] == 'push':  # push event.
-                s = format_push(d)
+                s = Formatting().format_push(d)
                 if s:  # send if we get it back.
                     self.plugin.announce_webhook(s[0], s[1])
             elif headers['x-github-event'] == 'status':
-                s = format_status(d)
+                s = Formatting().format_status(d)
                 if s:  # send if we get it back.
                     self.plugin.announce_webhook(s[0], s[1])
 
