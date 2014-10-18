@@ -184,8 +184,8 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
         else:  # we have auth, lets go.
             ah = headers['authorization']
             # grab user and password from config.
-            user = self.registryValue('username')
-            pw = self.registryValue('password')
+            user = callbacks.registryValue('username')
+            pw = callbacks.registryValue('password')
             # make our string to compare against.
             base64string = base64.encodestring('%s:%s' % (user, pw))[:-1]
             authstring = "Basic {0}".format(base64string)
