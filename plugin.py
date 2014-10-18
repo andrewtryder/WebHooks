@@ -8,6 +8,9 @@
 import json
 import cPickle as pickle
 from collections import defaultdict
+#import hmac
+#import hashlib
+import ipaddr
 # supybot libs
 import supybot.utils as utils
 from supybot.commands import *
@@ -83,11 +86,11 @@ class Formatting(object):
             # it will have side effects (memory exhaustion, ...)
             flat = {}
         if isinstance(dicts, list):
-            return flatten_subdicts(dict(enumerate(dicts)))
+            return self.flatten_subdicts(dict(enumerate(dicts)))
         elif isinstance(dicts, dict):
             for key, value in dicts.items():
                 if isinstance(value, dict):
-                    value = dict(flatten_subdicts(value))
+                    value = dict(self.flatten_subdicts(value))
                     for subkey, subvalue in value.items():
                         flat['%s__%s' % (key, subkey)] = subvalue
                 else:
@@ -117,7 +120,7 @@ class Formatting(object):
                                                                        compare)
             return (reponame, m)
         except Exception as e:
-            log.info("_format_push :: ERROR :: {0}".format(e))
+            self.log.info("_format_push :: ERROR :: {0}".format(e))
             return None
 
     def format_status(self, d):
@@ -134,7 +137,23 @@ class Formatting(object):
             m = "[{0}] {1} - ({2}@{3}) {4}".format(self._b(reponame), desc, branch, sha, target_url)
             return (reponame, m)
         except Exception as e:
-            log.info("format_status :: ERROR :: {0}".format(e))
+            self.log.info("format_status :: ERROR :: {0} :: {1}".format(e, d))
+            return None
+    
+    def format_bitbucket_push(self, d):
+        """Format Bitbucket push messages."""
+        # https://confluence.atlassian.com/display/BITBUCKET/POST+hook+management
+
+        try:
+            reponame = d['repository__slug']
+            commit_msg = d['commits'][0]['message'].strip()
+            committer = d['commits'][0]['author']
+            #numofc = self._bold(len(d['commits']))
+            #branch = self._o(d['commits'][0]['branch'])
+            m = "[{0}] {1} pushed {2} commit(s)".format(reponame, committer, commit_msg)
+            return (reponame, m)
+        except Exception as e:
+            self.log.info("_format_bitbucket_push :: ERROR :: {0} :: {1}".format(e, d))
             return None
 
 class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
@@ -149,20 +168,27 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
         self.log = log.getPluginLogger('WebHooks')
         
     def doPost(self, handler, path, form):
-        log.info("{0}".format(handler.address_string()))
-        if not handler.address_string().endswith('.rs.github.com') and \
-                not handler.address_string().endswith('.cloud-ips.com') and \
-                not handler.address_string() == 'localhost' and \
-                not handler.address_string().startswith('127.0.0.') and \
-                not handler.address_string().startswith('192.30.252.') and \
-                not handler.address_string().startswith('204.232.175.'):
-            log.warning("""'%s' tried to act as a web hook for Github,
-            but is not GitHub.""" % handler.address_string())
-            self.send_response(403)
+        # have to handle different hooks here.
+        ip = handler.address_string()  # source ip.
+        # now handle different cases.
+        if ip.endswith('.bitbucket.org'):  # bitbucket.
+            self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write(b('Error: you are not a GitHub server.'))
-        else:  # send OK back.
+            self.wfile.write("OK")
+            # headers
+            headers = dict(self.headers)
+            # payload
+            # good payload so lets process it.
+            json_payload = form.getvalue('payload')  # take from the form.
+            payload = json.loads(json_payload)  # json -> dict.
+            d = Formatting().flatten_subdicts(payload)  # flatten it out.
+            s = Formatting().format_bitbucket_push(d)
+            if s:
+                self.plugin.announce_webhook(s[0], s[1])
+        elif ipaddr.IPv4Address(ip) in ipaddr.IPv4Network('192.30.252.0/22'): # github
+        # in the future, this needs to check for ipv6 (2620:112:3000::/44)
+            # https://help.github.com/articles/what-ip-addresses-does-github-use-that-i-should-whitelist/
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
@@ -181,7 +207,7 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
             payload = json.loads(json_payload)  # json -> dict.
             d = Formatting().flatten_subdicts(payload)  # flatten it out.
             #self._log.info("doPost: {0}".format(d))  # log the message.
-            self.log.info("doPost: {0}".format(d))  # log the message.
+            #self.log.info("doPost: {0}".format(d))  # log the message.
             # lets figure out how to handle each type of notification here.
             # https://developer.github.com/webhooks/
             if headers['x-github-event'] == 'push':  # push event.
@@ -194,6 +220,19 @@ class WebHooksServiceCallback(httpserver.SupyHTTPServerCallback):
                 if s:  # send if we get it back.
                     self.log.info("Should be sending status.")
                     self.plugin.announce_webhook(s[0], s[1])
+        else:
+        #elif ip.endswith('.rs.github.com') or ip.
+        #        not handler.address_string().endswith('.cloud-ips.com') and \
+        #        not handler.address_string() == 'localhost' and \
+        #        not handler.address_string().startswith('127.0.0.') and \
+        #        not handler.address_string().startswith('192.30.252.') and \
+        #        not handler.address_string().startswith('204.232.175.'):
+            self.log.warning("""'%s' tried to act as a web hook""" % ip)
+            self.send_response(403)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write('ERROR')
+
 
 class WebHooks(callbacks.Plugin):
     """Add the help for "@plugin help WebHooks" here
@@ -255,7 +294,7 @@ class WebHooks(callbacks.Plugin):
     def announce_webhook(self, repo, message):
         """Internal function to announce webhooks."""
         
-        #self.log.info("Trying to announce: {0} {1}".format(repo, message))
+        self.log.info("Trying to announce: {0} {1}".format(repo, message))
         # lower it first.
         repo = repo.lower()
         # only work if present
